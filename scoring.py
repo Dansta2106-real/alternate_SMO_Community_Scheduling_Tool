@@ -302,7 +302,7 @@ def calculate_score(
 
 
 
-    for day in range(4):
+    for day in range(num_slots // slots_per_day):
 
         start = (
             day *

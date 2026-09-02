@@ -13,6 +13,49 @@ from output import display_solutions
 
 
 class OutputTests(unittest.TestCase):
+    def test_empty_warning_cell_is_written_as_nothing(self):
+        solutions = [
+            {
+                "data": [
+                    {
+                        "race": 0,
+                        "slot": 0,
+                        "p1_prerec": False,
+                        "p2_prerec": False,
+                    }
+                ]
+            }
+        ]
+
+        match_data = [
+            {
+                "runner1": "RunnerOne",
+                "runner2": "RunnerTwo",
+                "r1_slots": {0},
+                "r2_slots": {0},
+                "r1_preferred": {0},
+                "r2_preferred": {0},
+            }
+        ]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "schedule.csv"
+
+            with redirect_stdout(io.StringIO()):
+                display_solutions(
+                    solutions,
+                    match_data,
+                    [0],
+                    lambda slot: f"Slot {slot}",
+                    slots_per_day=1,
+                    output_file=str(output_path),
+                    runner_preferred_slots={"RunnerOne": {0}, "RunnerTwo": {0}},
+                )
+
+            saved = pd.read_csv(output_path)
+
+        self.assertEqual(saved.loc[0, "warning"], "Nothing")
+
     def test_flags_missing_runner_availability_in_warning_column(self):
         solutions = [
             {

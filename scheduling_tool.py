@@ -24,6 +24,11 @@ from output import (
 )
 
 
+from scoring import (
+    calculate_score
+)
+
+
 # ----------------------------------------------------
 # Files
 # ----------------------------------------------------
@@ -554,13 +559,23 @@ for solution_number in range(
 
 
 # ----------------------------------------------------
-# Sort by objective score
+# Rank by the user-readable penalty score
 # ----------------------------------------------------
+
+for solution in solutions:
+
+    solution["readable_score"] = calculate_score(
+        solution,
+        match_data,
+        runner_preferred_slots,
+        NUM_SLOTS,
+        SLOTS_PER_DAY
+    )["score"]
 
 solutions = sorted(
     solutions,
     key=lambda x:
-        x["objective"]
+        x["readable_score"]
 )
 
 
@@ -580,7 +595,8 @@ for i, solution in enumerate(
 
     print(
         f"Solution {i}: "
-        f"objective={solution['objective']}"
+        f"readable_score={solution['readable_score']} "
+        f"solver_objective={solution['objective']}"
     )
 
 

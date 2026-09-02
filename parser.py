@@ -3,33 +3,14 @@
 import pandas as pd
 import re
 
+from config import DAYS, HOURS_PER_DAY
+
 
 # ----------------------------------------------------
 # Constants
 # ----------------------------------------------------
 
-DAYS = [
-    "thursday",
-    "friday",
-    "saturday",
-    "sunday"
-]
-
-
-UTC_SLOTS = [
-    "10:30",
-    "12:00",
-    "13:30",
-    "15:00",
-    "16:30",
-    "18:00",
-    "19:30",
-    "21:00",
-    "22:30",
-    "24:00",
-    "1:30",
-    "3:00"
-]
+UTC_SLOTS = [f"{hour:02d}:00 UTC" for hour in range(HOURS_PER_DAY)]
 
 
 # ----------------------------------------------------
@@ -66,42 +47,51 @@ def timezone_offset(tz):
 
 def parse_time(day_index, value):
 
-    value = str(value).strip()
+    value = str(value).strip().upper()
+    value = re.sub(r"\s+UTC$", "", value)
+    match = re.fullmatch(r"(\d{1,2}):(\d{2})", value)
 
-    if value not in UTC_SLOTS:
+    if not match:
         raise ValueError(f"Unsupported slot: {value}")
 
-    slot_index = UTC_SLOTS.index(value)
+    hour = int(match.group(1))
+    minute = int(match.group(2))
+
+    if minute >= 60 or hour > HOURS_PER_DAY:
+        raise ValueError(f"Unsupported slot: {value}")
+
+    if hour == HOURS_PER_DAY and minute != 0:
+        raise ValueError(f"Unsupported slot: {value}")
+
+    # Legacy half-hour entries cannot be starts in the new schedule.
+    # Round them up to the next hourly start.
+    if minute:
+        hour += 1
 
     return (
-        day_index * len(UTC_SLOTS)
+        day_index * HOURS_PER_DAY
         +
-        slot_index
+        hour
     )
 
 
 
-def to_utc(minutes, offset):
+def to_utc(slot_value, offset):
 
     return (
-        minutes
+        slot_value
         -
-        offset * 60
+        offset
     )
 
 
 
 def slot_to_minutes(day_index, slot):
 
-    if slot not in UTC_SLOTS:
-        raise ValueError(f"Unsupported slot: {slot}")
-
-    slot_index = UTC_SLOTS.index(slot)
-
     return (
-        day_index * len(UTC_SLOTS)
+        day_index * HOURS_PER_DAY
         +
-        slot_index
+        slot
     )
 
 
@@ -112,9 +102,9 @@ def display_time(slot_value):
         return ""
 
 
-    day = slot_value // len(UTC_SLOTS)
+    day = slot_value // HOURS_PER_DAY
 
-    slot_index = slot_value % len(UTC_SLOTS)
+    slot_index = slot_value % HOURS_PER_DAY
 
 
     if day < 0:
@@ -132,7 +122,7 @@ def display_time(slot_value):
 
     return (
         f"{DAYS[day].capitalize()} "
-        f"{UTC_SLOTS[slot_index]}"
+        f"{slot_index:02d}:00 UTC"
     )
 
 
@@ -187,9 +177,7 @@ def load_availability(
         runner = row["runner"]
 
 
-        offset = timezone_offset(
-            row["timezone"]
-        )
+        offset = timezone_offset(row.get("timezone", "UTC"))
 
 
         utc_times = set()
@@ -214,7 +202,7 @@ def load_availability(
             values = str(values).strip()
 
 
-            if values == "":
+            if values == "" or values.upper() == "NOTHING":
 
                 continue
 
@@ -225,21 +213,20 @@ def load_availability(
                 t = t.strip()
 
 
-                local_minutes = parse_time(
+                local_slot = parse_time(
                     day_index,
                     t
                 )
 
 
-                utc_minutes = to_utc(
-                    local_minutes,
+                utc_slot = to_utc(
+                    local_slot,
                     offset
                 )
 
 
-                utc_times.add(
-                    utc_minutes
-                )
+                if 0 <= utc_slot < len(DAYS) * HOURS_PER_DAY:
+                    utc_times.add(utc_slot)
 
 
 
@@ -310,11 +297,9 @@ def create_slot_lookup():
     all_slots = []
 
 
-    for day_index in range(
-        len(DAYS)
-    ):
+    for day_index in range(len(DAYS)):
 
-        for slot in UTC_SLOTS:
+        for slot in range(HOURS_PER_DAY):
 
 
             slot_value = slot_to_minutes(

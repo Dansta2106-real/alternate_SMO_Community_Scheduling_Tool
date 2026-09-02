@@ -13,6 +13,7 @@ from config import (
     PREFERRED_SLOT_PENALTY,
     CENTER_SLOT_PENALTY
 )
+from config import START_GAP_HOURS
 
 
 def is_adjacent_slot_pair(left_index, right_index, slot_values, slots_per_day):
@@ -189,7 +190,26 @@ def build_model(
         )
 
     # ------------------------------------------------
-    # No duplicate slots
+    # Match duration and required break
+    # ------------------------------------------------
+
+    for left in range(len(match_data)):
+        for right in range(left + 1, len(match_data)):
+            start_distance = model.NewIntVar(
+                0,
+                num_slots,
+                f"start_distance_{left}_{right}"
+            )
+
+            model.AddAbsEquality(
+                start_distance,
+                race_slot[left] - race_slot[right]
+            )
+
+            model.Add(start_distance >= START_GAP_HOURS)
+
+    # ------------------------------------------------
+    # Used start positions
     # ------------------------------------------------
 
     slot_used = []
@@ -203,11 +223,7 @@ def build_model(
         ]
 
 
-        # absolutely no two races can share a slot
-
-        model.Add(
-            sum(column) <= 1
-        )
+        model.Add(sum(column) <= 1)
 
 
         used = model.NewBoolVar(
@@ -336,22 +352,12 @@ def build_model(
             )
 
             model.AddBoolAnd(
-                [
-                    at_slot,
-                    p2
-                ]
-            ).OnlyEnforceIf(
-                late_penalty
-            )
+                [at_slot, p2]
+            ).OnlyEnforceIf(late_penalty)
 
             model.AddBoolOr(
-                [
-                    at_slot.Not(),
-                    p2.Not()
-                ]
-            ).OnlyEnforceIf(
-                late_penalty.Not()
-            )
+                [at_slot.Not(), p2.Not()]
+            ).OnlyEnforceIf(late_penalty.Not())
 
             objective.append(
                 LATE_PREREC_PENALTY * (num_slots - s) * late_penalty
@@ -542,7 +548,7 @@ def build_model(
     # Empty day penalty
     # ------------------------------------------------
 
-    for day in range(4):
+    for day in range(num_slots // slots_per_day):
 
         start = day * slots_per_day
 

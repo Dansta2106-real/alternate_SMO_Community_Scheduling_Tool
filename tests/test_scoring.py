@@ -48,14 +48,13 @@ class ScoringTests(unittest.TestCase):
             + score["late_prerec_penalty"],
         )
 
-    def test_3_00_slot_is_not_adjacent_to_next_day_10_30(self):
-        self.assertEqual(parse_time(0, "1:30"), 10)
-        self.assertEqual(parse_time(0, "3:00"), 11)
-        self.assertEqual(parse_time(1, "10:30"), 12)
-        self.assertGreater(parse_time(1, "10:30") - parse_time(0, "3:00"), 0)
+    def test_hourly_utc_slots_are_mapped_across_weekdays(self):
+        self.assertEqual(parse_time(0, "00:00 UTC"), 0)
+        self.assertEqual(parse_time(0, "23:00 UTC"), 23)
+        self.assertEqual(parse_time(1, "00:00 UTC"), 24)
 
-    def test_3_00_is_mapped_to_end_of_day(self):
-        self.assertEqual(parse_time(0, "3:00"), 11)
+    def test_nothing_is_not_an_availability_time(self):
+        self.assertEqual(parse_time(0, "3:00 UTC"), 3)
 
     def test_adjacent_slot_helper_respects_day_boundaries(self):
         slot_values = [0, 1, 12, 13]

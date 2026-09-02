@@ -46,26 +46,26 @@ class ModelTests(unittest.TestCase):
 
     def test_conflicting_last_slot_availability_stays_feasible(self):
         # Two different races each include a runner only available
-        # at the final slot (11). One race should take slot 11,
+        # at slot 14. One race should take slot 14,
         # and the other should fall back to the latest remaining slot.
         match_data = [
             {
                 "runner1": "RunnerA",
                 "runner2": "RunnerB",
-                "r1_slots": {11},
-                "r2_slots": {10, 11},
-                "r1_preferred": {11},
+                "r1_slots": {14},
+                "r2_slots": {10, 14},
+                "r1_preferred": {14},
                 "r2_preferred": {10},
-                "possible_slots": [10, 11],
+                "possible_slots": [10, 14],
             },
             {
                 "runner1": "RunnerC",
                 "runner2": "RunnerD",
-                "r1_slots": {11},
-                "r2_slots": {9, 11},
-                "r1_preferred": {11},
+                "r1_slots": {14},
+                "r2_slots": {9, 14},
+                "r1_preferred": {14},
                 "r2_preferred": {9},
-                "possible_slots": [9, 11],
+                "possible_slots": [9, 14],
             },
         ]
 
@@ -78,10 +78,10 @@ class ModelTests(unittest.TestCase):
 
         model_data = build_model(
             match_data=match_data,
-            num_slots=12,
-            slots_per_day=3,
+            num_slots=24,
+            slots_per_day=24,
             preferred_slots=runner_preferred_slots,
-            slot_values=list(range(12)),
+            slot_values=list(range(24)),
         )
 
         solver = cp_model.CpSolver()
@@ -97,8 +97,8 @@ class ModelTests(unittest.TestCase):
             solver.Value(race_slot[1]),
         }
 
-        # One race can stay at 11, the other should use 10 (latest fallback).
-        self.assertEqual(assigned_slots, {10, 11})
+        # The two starts must be at least four hours apart.
+        self.assertEqual(assigned_slots, {10, 14})
 
         # Exactly one of the two "only slot 11" runners should become prerecorded.
         first_only_runner_prerec = solver.Value(prerec_flags[0])
@@ -114,16 +114,16 @@ class ModelTests(unittest.TestCase):
                 "r2_slots": set(),
                 "r1_preferred": set(),
                 "r2_preferred": set(),
-                "possible_slots": [0, 10, 11],
+                "possible_slots": [0, 10, 14],
             },
             {
                 "runner1": "FixedA",
                 "runner2": "FixedB",
-                "r1_slots": {11},
-                "r2_slots": {11},
-                "r1_preferred": {11},
-                "r2_preferred": {11},
-                "possible_slots": [11],
+                "r1_slots": {14},
+                "r2_slots": {14},
+                "r1_preferred": {14},
+                "r2_preferred": {14},
+                "possible_slots": [14],
             },
         ]
 
@@ -136,10 +136,10 @@ class ModelTests(unittest.TestCase):
 
         model_data = build_model(
             match_data=match_data,
-            num_slots=12,
-            slots_per_day=3,
+            num_slots=24,
+            slots_per_day=24,
             preferred_slots=runner_preferred_slots,
-            slot_values=list(range(12)),
+            slot_values=list(range(24)),
         )
 
         solver = cp_model.CpSolver()
@@ -150,8 +150,8 @@ class ModelTests(unittest.TestCase):
         race_slot = model_data["race_slot"]
         prerec_flags = model_data["prerec_flags"]
 
-        # Slot 11 is occupied by the fixed race; zero-availability race
-        # should be placed at the latest remaining slot (10).
+        # Slot 14 is occupied by the fixed race; zero-availability race
+        # should be placed at the latest remaining compatible slot (10).
         self.assertEqual(solver.Value(race_slot[0]), 10)
 
         # Zero-availability race is necessarily prerecorded for both runners.

@@ -123,7 +123,7 @@ def build_dataframe(
                     scheduled_label,
 
                 "warning":
-                    " | ".join(warnings),
+                    " | ".join(warnings) if warnings else "Nothing",
             }
         )
 

@@ -8,27 +8,17 @@ OUTPUT_FILE = "schedule.csv"
 
 
 DAYS = [
+    "monday",
+    "tuesday",
+    "wednesday",
     "thursday",
-    "friday",
-    "saturday",
-    "sunday"
+    "friday"
 ]
 
-
-UTC_SLOTS = [
-    "10:30",
-    "12:00",
-    "13:30",
-    "15:00",
-    "16:30",
-    "18:00",
-    "19:30",
-    "21:00",
-    "22:30",
-    "24:00",
-    "1:30",
-    "3:00"
-]
+HOURS_PER_DAY = 24
+MATCH_DURATION_HOURS = 3
+BREAK_DURATION_HOURS = 1
+START_GAP_HOURS = MATCH_DURATION_HOURS + BREAK_DURATION_HOURS
 
 
 # Penalties
